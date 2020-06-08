@@ -1,5 +1,6 @@
-CREATE OR REPLACE PACKAGE BODY COM_FOS_EXECUTE_PLSQL_CODE
-IS
+create or replace package body com_fos_execute_plsql_code
+as
+
 function render
     ( p_dynamic_action apex_plugin.t_dynamic_action
     , p_plugin         apex_plugin.t_plugin
@@ -151,7 +152,8 @@ exception
         return l_result;
 end;
 
-END COM_FOS_EXECUTE_PLSQL_CODE;
+
+end;
 /
 
 

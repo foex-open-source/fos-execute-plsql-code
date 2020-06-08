@@ -2,6 +2,14 @@
     "name":"FOS - Execute PL\/SQL Code"
    ,"version":"20.1.0"
    ,"description":"Executes PL\/SQL code on the server."
+   ,"keywords":[
+        "execute"
+       ,"plsql"
+       ,"advanced"
+       ,"notification"
+       ,"clob"
+       ,"json"
+    ]
    ,"license":"MIT"
    ,"homepage":"https:\/\/foex.at\/fos"
    ,"author":{
@@ -12,7 +20,7 @@
     }
    ,"repository":{
         "type":"git"
-       ,"url":"https:\/\/github.com\/foex-open-source\/.git"
+       ,"url":"https:\/\/github.com\/foex-open-source\/fos-execute-plsql-code.git"
     }
    ,"oracle":{
         "versions":[
@@ -30,7 +38,7 @@
            ,"plugin":{
                 "internalName":"COM.FOS.EXECUTE_PLSQL_CODE"
                ,"type":"dynamic action"
-               ,"demo":"https:\/\/fos.world\/ords\/f?p=1000:"
+               ,"demo":"https:\/\/fos.world\/ords\/f?p=1000:1020"
                ,"previewImage":"https:\/\/fos.world\/ords\/fos_master_ws\/fos-image\/COM.FOS.EXECUTE_PLSQL_CODE"
             }
         }
