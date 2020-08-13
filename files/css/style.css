@@ -1,10 +1,22 @@
-.au-execute-customSpinnerClass {
-    position: absolute !important;
-    left: 0 !important;
-    right: 0 !important;
-    margin: auto !important;
-    top: 0 !important;
-    bottom: 0 !important;
+
+
+.fos-region-overlay{
+    position: absolute;
     z-index: 450;
+    visibility: visible;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.5);
 }
+
+.fos-region-overlay-fixed{
+    position: fixed;
+    z-index: 450;
+    visibility: visible;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.5);
+}
+
+
 
