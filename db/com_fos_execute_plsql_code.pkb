@@ -14,6 +14,112 @@ as
 --  GitHub: https://github.com/foex-open-source/fos-execute-plsql-code
 --
 -- =============================================================================
+g_in_error_handling_callback boolean := false;
+--------------------------------------------------------------------------------
+-- private function to include the apex error handling function, if one is
+-- defined on application or page level
+--------------------------------------------------------------------------------
+function error_function_callback
+  ( p_error in apex_error.t_error
+  )  return apex_error.t_error_result
+is
+  c_cr constant varchar2(1) := chr(10);
+
+  l_error_handling_function apex_application_pages.error_handling_function%type;
+  l_statement               varchar2(32767);
+  l_result                  apex_error.t_error_result;
+
+  procedure log_value (
+      p_attribute_name in varchar2,
+      p_old_value      in varchar2,
+      p_new_value      in varchar2 )
+  is
+  begin
+      if   p_old_value <> p_new_value
+        or (p_old_value is not null and p_new_value is null)
+        or (p_old_value is null     and p_new_value is not null)
+      then
+          apex_debug.info('%s: %s', p_attribute_name, p_new_value);
+      end if;
+  end log_value;
+begin
+  if not g_in_error_handling_callback
+  then
+    g_in_error_handling_callback := true;
+
+    begin
+      select /*+ result_cache */
+             coalesce(p.error_handling_function, f.error_handling_function)
+        into l_error_handling_function
+        from apex_applications f,
+             apex_application_pages p
+       where f.application_id     = apex_application.g_flow_id
+         and p.application_id (+) = f.application_id
+         and p.page_id        (+) = apex_application.g_flow_step_id;
+    exception when no_data_found then
+        null;
+    end;
+  end if;
+
+  if l_error_handling_function is not null
+  then
+
+    l_statement := 'declare'||c_cr||
+                       'l_error apex_error.t_error;'||c_cr||
+                   'begin'||c_cr||
+                       'l_error := apex_error.g_error;'||c_cr||
+                       'apex_error.g_error_result := '||l_error_handling_function||' ('||c_cr||
+                           'p_error => l_error );'||c_cr||
+                   'end;';
+
+    apex_error.g_error := p_error;
+
+    begin
+        apex_exec.execute_plsql (
+            p_plsql_code      => l_statement );
+    exception when others then
+        apex_debug.error('error in error handler: %s', sqlerrm);
+        apex_debug.error('backtrace: %s', dbms_utility.format_error_backtrace);
+    end;
+
+    l_result := apex_error.g_error_result;
+
+    if l_result.message is null
+    then
+        l_result.message          := nvl(l_result.message,          p_error.message);
+        l_result.additional_info  := nvl(l_result.additional_info,  p_error.additional_info);
+        l_result.display_location := nvl(l_result.display_location, p_error.display_location);
+        l_result.page_item_name   := nvl(l_result.page_item_name,   p_error.page_item_name);
+        l_result.column_alias     := nvl(l_result.column_alias,     p_error.column_alias);
+    end if;
+  else
+    l_result.message          := p_error.message;
+    l_result.additional_info  := p_error.additional_info;
+    l_result.display_location := p_error.display_location;
+    l_result.page_item_name   := p_error.page_item_name;
+    l_result.column_alias     := p_error.column_alias;
+  end if;
+
+  if l_result.message = l_result.additional_info
+  then
+    l_result.additional_info := null;
+  end if;
+
+  g_in_error_handling_callback := false;
+
+  return l_result;
+
+exception
+  when others then
+    l_result.message             := 'custom apex error handling function failed !!';
+    l_result.additional_info     := null;
+    l_result.display_location    := apex_error.c_on_error_page;
+    l_result.page_item_name      := null;
+    l_result.column_alias        := null;
+    g_in_error_handling_callback := false;
+    return l_result;
+
+end error_function_callback;
 
 --------------------------------------------------------------------------------
 -- this render function sets up a javascript function which will be called
@@ -149,8 +255,11 @@ function ajax
   )
 return apex_plugin.t_dynamic_action_ajax_result
 is
-    -- l_result is necessary for the plugin infrastructure
-    l_result           apex_plugin.t_dynamic_action_ajax_result;
+    -- error handling
+    l_apex_error       apex_error.t_error;
+    l_result           apex_error.t_error_result;
+    -- return type which is necessary for the plugin infrastructure
+    l_return           apex_plugin.t_dynamic_action_ajax_result;
 
     -- read plugin parameters and store in local variables
     l_statement         p_dynamic_action.attribute_01%type := p_dynamic_action.attribute_01;
@@ -258,27 +367,47 @@ begin
 
     apex_json.close_object;
 
-    return l_result;
+    return l_return;
 
 exception
     when others then
         rollback;
 
-        apex_json.initialize_output;
-        apex_json.open_object;
-        apex_json.write('status', 'error');
-
-        l_message := nvl(apex_application.g_x01, l_error_message);
-
+        l_message := nvl(apex_application.g_x01, sqlerrm);
         l_message := replace(l_message, '#SQLCODE#', escape_html(sqlcode, l_escape_message));
         l_message := replace(l_message, '#SQLERRM#', escape_html(sqlerrm, l_escape_message));
         l_message := replace(l_message, '#SQLERRM_TEXT#', escape_html(substr(sqlerrm, instr(sqlerrm, ':')+1), l_escape_message));
+
+        apex_json.initialize_output;
+        l_apex_error.message             := l_message;
+        l_apex_error.ora_sqlcode         := sqlcode;
+        l_apex_error.ora_sqlerrm         := sqlerrm;
+        l_apex_error.error_backtrace     := dbms_utility.format_error_backtrace;
+        --l_apex_error.additional_info     := ;
+        --l_apex_error.display_location    := ;
+        --l_apex_error.association_type    := ;
+        --l_apex_error.page_item_name      := ;
+        --l_apex_error.region_id           := ;
+        --l_apex_error.column_alias        := ;
+        --l_apex_error.row_num             := ;
+        --l_apex_error.is_internal_error   := ;
+        --l_apex_error.apex_error_code     := ;
+        --l_apex_error.component           := ;
+        --
+        l_result := error_function_callback(l_apex_error);
+
+        apex_json.open_object;
+        apex_json.write('status' , 'error');
 
         if not l_replace_on_client then
             l_message := apex_plugin_util.replace_substitutions(l_message);
         end if;
 
-        apex_json.write('message'     , l_message);
+        apex_json.write('message'         , l_result.message);
+        apex_json.write('additional_info' , l_result.additional_info);
+        apex_json.write('display_location', l_result.display_location);
+        apex_json.write('page_item_name'  , l_result.page_item_name);
+        apex_json.write('column_alias'    , l_result.column_alias);
 
         if apex_application.g_x02 is not null
         then
@@ -293,9 +422,8 @@ exception
 
         apex_json.close_object;
 
-        return l_result;
+        return l_return;
 end ajax;
-
 
 end;
 /

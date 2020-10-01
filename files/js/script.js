@@ -93,6 +93,20 @@ FOS.exec.plsql = function (daContext, config, initFn) {
         function _performActions(pData) {
             // this defines the list of actions we support
             var actionFuntions = {
+                hideRegions: function (region) {
+                    try {
+                        apex.region(region).element.hide();
+                    } catch (e) {
+                        apex.debug.warn('.... Error hiding the following region: ' + region, e);
+                    }
+                },
+                showRegions: function (region) {
+                    try {
+                        apex.region(region).element.show();
+                    } catch (e) {
+                        apex.debug.warn('.... Error showing the following region: ' + region, e);
+                    }
+                },
                 hideItems: function (item) {
                     apex.item(item).hide();
                 },
@@ -104,6 +118,12 @@ FOS.exec.plsql = function (daContext, config, initFn) {
                 },
                 disableItems: function (item) {
                     apex.item(item).disable();
+                },
+                hideButtons: function (button) {
+                    apex.jQuery('#' + button).hide();
+                },
+                showButtons: function (button) {
+                    apex.jQuery('#' + button).show();
                 },
                 enableButtons: function (button) {
                     apex.jQuery('#' + button).attr("disabled", false);
@@ -152,7 +172,7 @@ FOS.exec.plsql = function (daContext, config, initFn) {
                 },
                 addClass: function (item) {
                     apex.jQuery(item.selector).addClass(item.class);
-                },
+                }
             };
             // iterate through our supported action functions and then through our data object to see which ones should be executed
             Object.entries(actionFuntions).forEach(function (action) {
