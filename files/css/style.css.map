@@ -1,6 +1,2 @@
-
-
 {"version":3,"sources":["style.css"],"names":[],"mappings":"AAAA,mB,CASA,yB,CARI,iB,CACA,W,CACA,kB,CACA,U,CACA,W,CACA,+B,CAGJ,yB,CACI,c","file":"style.css","sourcesContent":[".fos-region-overlay{\n    position: absolute;\n    z-index: 450;\n    visibility: visible;\n    width: 100%;\n    height: 100%;\n    background: rgba(255, 255, 255, 0.5);\n}\n\n.fos-region-overlay-fixed{\n    position: fixed;\n    z-index: 450;\n    visibility: visible;\n    width: 100%;\n    height: 100%;\n    background: rgba(255, 255, 255, 0.5);\n}"]}
-
-
 

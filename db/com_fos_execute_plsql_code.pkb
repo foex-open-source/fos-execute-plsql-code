@@ -1,5 +1,3 @@
-
-
 create or replace package body com_fos_execute_plsql_code
 as
 
@@ -121,6 +119,65 @@ exception
 
 end error_function_callback;
 
+--
+-- Cater for display values
+-- Thanks: Pavel Glebov (glebovpavel)
+--
+function get_display_value
+  ( p_item_name in apex_application_page_items.item_name%type,
+    p_value     in varchar2
+  ) return varchar2
+is
+    l_display_as_code     apex_application_page_items.display_as_code%type;
+    l_lov_named_lov       apex_application_page_items.lov_named_lov%type;
+    l_lov_definition      apex_application_page_items.lov_definition%type;
+    l_lov_display_null    apex_application_page_items.lov_display_null%type;
+    l_lov_null_text       apex_application_page_items.lov_null_text%type;
+begin
+  begin
+    select display_as_code,
+           lov_named_lov,
+           lov_definition,
+           lov_display_null,
+           lov_null_text
+    into   l_display_as_code,
+           l_lov_named_lov,
+           l_lov_definition,
+           l_lov_display_null,
+           l_lov_null_text
+    from   apex_application_page_items
+    where  application_id = nv('APP_ID')
+    and    page_id        = nv('APP_PAGE_ID')
+    and    item_name      = p_item_name;
+  exception
+    when no_data_found then
+      raise_application_error(-20001,'Item '||p_item_name||' not found!');
+  end;
+  if l_display_as_code != 'NATIVE_POPUP_LOV' then
+    return '';
+  end if;
+
+  if l_lov_display_null = 'Yes' then
+      null;
+  else
+      l_lov_null_text := '';
+  end if;
+
+  if l_lov_named_lov is not null then
+      return apex_item.text_from_lov
+        ( p_value     => p_value
+        , p_lov       => l_lov_named_lov
+        , p_null_text => l_lov_null_text
+        );
+   else
+      return apex_item.text_from_lov_query
+        ( p_value     => p_value
+        , p_query     => l_lov_definition
+        , p_null_text => l_lov_null_text
+        );
+  end if;
+
+end get_display_value;
 --------------------------------------------------------------------------------
 -- this render function sets up a javascript function which will be called
 -- when the dynamic action is executed.
@@ -274,6 +331,7 @@ is
     l_message          varchar2(32767);
     l_message_title    varchar2(32767);
     l_item_names       apex_t_varchar2;
+    l_value            varchar2(32767);
 
     --
     -- We won't escape serverside if we do it client side to avoid double escaping
@@ -321,7 +379,14 @@ begin
                                     , p_dynamic_action => p_dynamic_action
                                     )
                            );
-            apex_json.write('value', V(l_item_names(l_idx)));
+            l_value := V( l_item_names(l_idx));
+            apex_json.write('value'  , l_value);
+            -- Thanks: Pavel Glebov (glebovpavel)
+            apex_json.write('display', get_display_value(
+              p_item_name => l_item_names(l_idx),
+              p_value     => l_value
+            ));
+            -- eof thanks
             apex_json.close_object;
         end loop;
 
@@ -427,7 +492,5 @@ end ajax;
 
 end;
 /
-
-
 
 

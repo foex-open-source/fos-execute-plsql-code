@@ -1,5 +1,3 @@
-
-
 /* globals apex,fostr,$,$s */
 
 var FOS = window.FOS || {};
@@ -132,7 +130,7 @@ FOS.exec.plsql = function (daContext, config, initFn) {
                     apex.jQuery('#' + button).attr("disabled", true);
                 },
                 setValues: function (item) {
-                    $s(item.name, item.value, item.suppressChangeEvent);
+                    $s(item.name, item.value, item.display, item.suppressChangeEvent);
                 },
                 clearErrors: function () {
                     apex.message.clearErrors();
@@ -180,6 +178,8 @@ FOS.exec.plsql = function (daContext, config, initFn) {
                     fn = action[1];
                 if (method in pData && Array.isArray(pData[method])) {
                     pData[method].forEach(fn);
+                } else if (method in pData && ['boolean','number','string'].includes(typeof pData[method])) {
+                    fn.call(pData, pData[method]);
                 }
             });
 
@@ -206,7 +206,11 @@ FOS.exec.plsql = function (daContext, config, initFn) {
                 itemArray = pData.items;
                 itemCount = itemArray.length;
                 for (var i = 0; i < itemCount; i++) {
-                    $s(itemArray[i].id, itemArray[i].value, null, options.suppressChangeEvent);
+                    if (itemArray[i].display) {
+                        $s(itemArray[i].id, itemArray[i].value, itemArray[i].display, options.suppressChangeEvent);
+                    } else {
+                        $s(itemArray[i].id, itemArray[i].value, null, options.suppressChangeEvent);
+                    }
                 }
             }
 
@@ -229,11 +233,16 @@ FOS.exec.plsql = function (daContext, config, initFn) {
             }
 
             // Notification overrides from developer
-            if (pData.execPlsqlResult && pData.execPlsqlResult.notification) {
-                var notification = pData.execPlsqlResult.notification;
-                pData.message = notification.message;
-                pData.messageType = notification.type;
-                pData.messageTitle = notification.title;
+            if (pData.execPlsqlResult) {
+                if (pData.execPlsqlResult.cancelActions) {
+                    cancelActions = true;
+                }
+                if (pData.execPlsqlResult.notification) {
+                    var notification = pData.execPlsqlResult.notification;
+                    pData.message = notification.message;
+                    pData.messageType = notification.type;
+                    pData.messageTitle = notification.title;
+                }
             }
 
             // Notification
@@ -315,6 +324,8 @@ FOS.exec.plsql = function (daContext, config, initFn) {
                     }
                 }
             }
+            // cancel actions as there is an exception
+            apex.da.resume(resumeCallback, true);
         }
     }
 
@@ -382,7 +393,5 @@ FOS.exec.plsql = function (daContext, config, initFn) {
         apex.da.handleAjaxErrors(jqXHR, textStatus, errorThrown, resumeCallback);
     });
 };
-
-
 
 
