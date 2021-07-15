@@ -178,7 +178,7 @@ FOS.exec.plsql = function (daContext, config, initFn) {
                     fn = action[1];
                 if (method in pData && Array.isArray(pData[method])) {
                     pData[method].forEach(fn);
-                } else if (method in pData && ['boolean','number','string'].includes(typeof pData[method])) {
+                } else if (method in pData && ['boolean', 'number', 'string'].includes(typeof pData[method])) {
                     fn.call(pData, pData[method]);
                 }
             });
@@ -215,7 +215,7 @@ FOS.exec.plsql = function (daContext, config, initFn) {
             }
 
 
-            //clob page item/ variable/ variable as json
+            //clob page item/ variable/ variable as json/ pass into a function as json
             if (clobSettings.returnClob) {
                 switch (clobSettings.returnClobInto) {
                     case 'pageitem':
@@ -228,6 +228,14 @@ FOS.exec.plsql = function (daContext, config, initFn) {
                         pData.execPlsqlResult = JSON.parse(pData.clob);
                         FOS.exec.createNestedObjectAndAssign(window, clobSettings.returnClobVariable, pData.execPlsqlResult);
                         _performActions(pData.execPlsqlResult);
+                        break;
+                    case 'javascriptinitasjson':
+                        if (typeof config.clobCallback === 'function') {
+                            pData.execPlsqlResult = JSON.parse(pData.clob);
+                            config.clobCallback.call(config, pData.execPlsqlResult);
+                        } else {
+                            apex.debug.warn('.... Error "clobCallback" function is missing from the config options. You must define this function in the "Javascript Initialization Code" attribute in your dynamic action!');
+                        }
                         break;
                 }
             }
@@ -343,6 +351,13 @@ FOS.exec.plsql = function (daContext, config, initFn) {
                     clobToSubmit = JSON.stringify(toSubmit);
                 } else {
                     clobToSubmit = toSubmit;
+                }
+                break;
+            case 'javascriptinit':
+                if (typeof config.submitClob === 'function') {
+                    clobToSubmit = config.submitClob.call(config);
+                } else {
+                    apex.debug.warn('.... Error "submitClob" function is missing from the config options. You must define this function in the "Javascript Initialization Code" attribute in your dynamic action!');
                 }
                 break;
             default:

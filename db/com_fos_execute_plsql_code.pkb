@@ -13,6 +13,7 @@ as
 --
 -- =============================================================================
 g_in_error_handling_callback boolean := false;
+
 --------------------------------------------------------------------------------
 -- private function to include the apex error handling function, if one is
 -- defined on application or page level
@@ -21,102 +22,102 @@ function error_function_callback
   ( p_error in apex_error.t_error
   )  return apex_error.t_error_result
 is
-  c_cr constant varchar2(1) := chr(10);
+    c_cr constant varchar2(1) := chr(10);
 
-  l_error_handling_function apex_application_pages.error_handling_function%type;
-  l_statement               varchar2(32767);
-  l_result                  apex_error.t_error_result;
+    l_error_handling_function apex_application_pages.error_handling_function%type;
+    l_statement               varchar2(32767);
+    l_result                  apex_error.t_error_result;
 
-  procedure log_value (
-      p_attribute_name in varchar2,
-      p_old_value      in varchar2,
-      p_new_value      in varchar2 )
-  is
-  begin
-      if   p_old_value <> p_new_value
-        or (p_old_value is not null and p_new_value is null)
-        or (p_old_value is null     and p_new_value is not null)
-      then
-          apex_debug.info('%s: %s', p_attribute_name, p_new_value);
-      end if;
-  end log_value;
+    procedure log_value
+      ( p_attribute_name in varchar2
+      , p_old_value      in varchar2
+      , p_new_value      in varchar2
+      )
+    is
+    begin
+        if   p_old_value <> p_new_value
+          or (p_old_value is not null and p_new_value is null)
+          or (p_old_value is null     and p_new_value is not null)
+        then
+            apex_debug.info('%s: %s', p_attribute_name, p_new_value);
+        end if;
+    end log_value;
+
 begin
-  if not g_in_error_handling_callback
-  then
-    g_in_error_handling_callback := true;
-
-    begin
-      select /*+ result_cache */
-             coalesce(p.error_handling_function, f.error_handling_function)
-        into l_error_handling_function
-        from apex_applications f,
-             apex_application_pages p
-       where f.application_id     = apex_application.g_flow_id
-         and p.application_id (+) = f.application_id
-         and p.page_id        (+) = apex_application.g_flow_step_id;
-    exception when no_data_found then
-        null;
-    end;
-  end if;
-
-  if l_error_handling_function is not null
-  then
-
-    l_statement := 'declare'||c_cr||
-                       'l_error apex_error.t_error;'||c_cr||
-                   'begin'||c_cr||
-                       'l_error := apex_error.g_error;'||c_cr||
-                       'apex_error.g_error_result := '||l_error_handling_function||' ('||c_cr||
-                           'p_error => l_error );'||c_cr||
-                   'end;';
-
-    apex_error.g_error := p_error;
-
-    begin
-        apex_exec.execute_plsql (
-            p_plsql_code      => l_statement );
-    exception when others then
-        apex_debug.error('error in error handler: %s', sqlerrm);
-        apex_debug.error('backtrace: %s', dbms_utility.format_error_backtrace);
-    end;
-
-    l_result := apex_error.g_error_result;
-
-    if l_result.message is null
+    if not g_in_error_handling_callback
     then
-        l_result.message          := nvl(l_result.message,          p_error.message);
-        l_result.additional_info  := nvl(l_result.additional_info,  p_error.additional_info);
-        l_result.display_location := nvl(l_result.display_location, p_error.display_location);
-        l_result.page_item_name   := nvl(l_result.page_item_name,   p_error.page_item_name);
-        l_result.column_alias     := nvl(l_result.column_alias,     p_error.column_alias);
+        g_in_error_handling_callback := true;
+
+        begin
+            select /*+ result_cache */
+                   coalesce(p.error_handling_function, f.error_handling_function)
+              into l_error_handling_function
+              from apex_applications f,
+                   apex_application_pages p
+             where f.application_id     = apex_application.g_flow_id
+               and p.application_id (+) = f.application_id
+               and p.page_id        (+) = apex_application.g_flow_step_id;
+        exception when no_data_found then
+            null;
+        end;
     end if;
-  else
-    l_result.message          := p_error.message;
-    l_result.additional_info  := p_error.additional_info;
-    l_result.display_location := p_error.display_location;
-    l_result.page_item_name   := p_error.page_item_name;
-    l_result.column_alias     := p_error.column_alias;
-  end if;
 
-  if l_result.message = l_result.additional_info
-  then
-    l_result.additional_info := null;
-  end if;
+    if l_error_handling_function is not null
+    then
+        l_statement := 'declare'||c_cr||
+                           'l_error apex_error.t_error;'||c_cr||
+                       'begin'||c_cr||
+                           'l_error := apex_error.g_error;'||c_cr||
+                           'apex_error.g_error_result := '||l_error_handling_function||' ('||c_cr||
+                               'p_error => l_error );'||c_cr||
+                       'end;';
 
-  g_in_error_handling_callback := false;
+        apex_error.g_error := p_error;
 
-  return l_result;
+        begin
+            apex_exec.execute_plsql(l_statement);
+        exception when others then
+            apex_debug.error('error in error handler: %s', sqlerrm);
+            apex_debug.error('backtrace: %s', dbms_utility.format_error_backtrace);
+        end;
 
-exception
-  when others then
-    l_result.message             := 'custom apex error handling function failed !!';
-    l_result.additional_info     := null;
-    l_result.display_location    := apex_error.c_on_error_page;
-    l_result.page_item_name      := null;
-    l_result.column_alias        := null;
+        l_result := apex_error.g_error_result;
+
+        if l_result.message is null
+        then
+            l_result.message          := nvl(l_result.message,          p_error.message);
+            l_result.additional_info  := nvl(l_result.additional_info,  p_error.additional_info);
+            l_result.display_location := nvl(l_result.display_location, p_error.display_location);
+            l_result.page_item_name   := nvl(l_result.page_item_name,   p_error.page_item_name);
+            l_result.column_alias     := nvl(l_result.column_alias,     p_error.column_alias);
+        end if;
+    else
+        l_result.message          := p_error.message;
+        l_result.additional_info  := p_error.additional_info;
+        l_result.display_location := p_error.display_location;
+        l_result.page_item_name   := p_error.page_item_name;
+        l_result.column_alias     := p_error.column_alias;
+    end if;
+
+    if l_result.message = l_result.additional_info
+    then
+        l_result.additional_info := null;
+    end if;
+
     g_in_error_handling_callback := false;
+
     return l_result;
 
+exception
+    when others then
+        l_result.message             := 'custom apex error handling function failed !!';
+        l_result.additional_info     := null;
+        l_result.display_location    := apex_error.c_on_error_page;
+        l_result.page_item_name      := null;
+        l_result.column_alias        := null;
+        g_in_error_handling_callback := false;
+
+        return l_result;
 end error_function_callback;
 
 --
@@ -133,51 +134,58 @@ is
     l_lov_definition      apex_application_page_items.lov_definition%type;
     l_lov_display_null    apex_application_page_items.lov_display_null%type;
     l_lov_null_text       apex_application_page_items.lov_null_text%type;
+    l_app_id              apex_application_page_items.application_id%type    := nv('APP_ID');
+    l_page_id             apex_application_page_items.page_id%type           := nv('APP_PAGE_ID');
 begin
-  begin
-    select display_as_code,
-           lov_named_lov,
-           lov_definition,
-           lov_display_null,
-           lov_null_text
-    into   l_display_as_code,
-           l_lov_named_lov,
-           l_lov_definition,
-           l_lov_display_null,
-           l_lov_null_text
-    from   apex_application_page_items
-    where  application_id = nv('APP_ID')
-    and    page_id        = nv('APP_PAGE_ID')
-    and    item_name      = p_item_name;
-  exception
-    when no_data_found then
-      raise_application_error(-20001,'Item '||p_item_name||' not found!');
-  end;
-  if l_display_as_code != 'NATIVE_POPUP_LOV' then
-    return '';
-  end if;
+    begin
+        select display_as_code
+             , lov_named_lov
+             , lov_definition
+             , lov_display_null
+             , lov_null_text
+          into l_display_as_code
+             , l_lov_named_lov
+             , l_lov_definition
+             , l_lov_display_null
+             , l_lov_null_text
+          from apex_application_page_items
+         where application_id  = l_app_id
+           and page_id        in (0, l_page_id) -- Bug fix: added support for page zero items - thanks mbrde
+           and item_name       = p_item_name
+        ;
+    exception
+        when no_data_found then
+            raise_application_error(-20001,'Item '||p_item_name||' not found!');
+    end;
 
-  if l_lov_display_null = 'Yes' then
-      null;
-  else
-      l_lov_null_text := '';
-  end if;
+    if l_display_as_code != 'NATIVE_POPUP_LOV'
+    then
+        return '';
+    end if;
 
-  if l_lov_named_lov is not null then
-      return apex_item.text_from_lov
-        ( p_value     => p_value
-        , p_lov       => l_lov_named_lov
-        , p_null_text => l_lov_null_text
-        );
-   else
-      return apex_item.text_from_lov_query
-        ( p_value     => p_value
-        , p_query     => l_lov_definition
-        , p_null_text => l_lov_null_text
-        );
-  end if;
+    if l_lov_display_null = 'Yes'
+    then
+        null;
+    else
+        l_lov_null_text := '';
+    end if;
 
+    if l_lov_named_lov is not null
+    then
+        return apex_item.text_from_lov
+          ( p_value     => p_value
+          , p_lov       => l_lov_named_lov
+          , p_null_text => l_lov_null_text
+          );
+    else
+        return apex_item.text_from_lov_query
+          ( p_value     => p_value
+          , p_query     => l_lov_definition
+          , p_null_text => l_lov_null_text
+          );
+    end if;
 end get_display_value;
+
 --------------------------------------------------------------------------------
 -- this render function sets up a javascript function which will be called
 -- when the dynamic action is executed.
@@ -337,9 +345,9 @@ is
     -- We won't escape serverside if we do it client side to avoid double escaping
     --
     function escape_html
-    ( p_html                   in varchar2
-    , p_escape_already_enabled in boolean
-    ) return varchar2
+      ( p_html                   in varchar2
+      , p_escape_already_enabled in boolean
+      ) return varchar2
     is
     begin
         return case when p_escape_already_enabled then p_html else apex_escape.html(p_html) end;
@@ -382,11 +390,15 @@ begin
             l_value := V( l_item_names(l_idx));
             apex_json.write('value'  , l_value);
             -- Thanks: Pavel Glebov (glebovpavel)
-            apex_json.write('display', get_display_value(
-              p_item_name => l_item_names(l_idx),
-              p_value     => l_value
-            ));
+            apex_json.write
+              ( 'display'
+              , get_display_value
+                  ( p_item_name => l_item_names(l_idx)
+                  , p_value     => l_value
+                  )
+              );
             -- eof thanks
+
             apex_json.close_object;
         end loop;
 
@@ -438,7 +450,7 @@ exception
     when others then
         rollback;
 
-        l_message := nvl(apex_application.g_x01, sqlerrm);
+        l_message := coalesce(apex_application.g_x01, l_error_message, sqlerrm);
         l_message := replace(l_message, '#SQLCODE#', escape_html(sqlcode, l_escape_message));
         l_message := replace(l_message, '#SQLERRM#', escape_html(sqlerrm, l_escape_message));
         l_message := replace(l_message, '#SQLERRM_TEXT#', escape_html(substr(sqlerrm, instr(sqlerrm, ':')+1), l_escape_message));
@@ -448,23 +460,14 @@ exception
         l_apex_error.ora_sqlcode         := sqlcode;
         l_apex_error.ora_sqlerrm         := sqlerrm;
         l_apex_error.error_backtrace     := dbms_utility.format_error_backtrace;
-        --l_apex_error.additional_info     := ;
-        --l_apex_error.display_location    := ;
-        --l_apex_error.association_type    := ;
-        --l_apex_error.page_item_name      := ;
-        --l_apex_error.region_id           := ;
-        --l_apex_error.column_alias        := ;
-        --l_apex_error.row_num             := ;
-        --l_apex_error.is_internal_error   := ;
-        --l_apex_error.apex_error_code     := ;
-        --l_apex_error.component           := ;
-        --
+
         l_result := error_function_callback(l_apex_error);
 
         apex_json.open_object;
         apex_json.write('status' , 'error');
 
-        if not l_replace_on_client then
+        if not l_replace_on_client
+        then
             l_message := apex_plugin_util.replace_substitutions(l_message);
         end if;
 
