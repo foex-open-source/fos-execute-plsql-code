@@ -87,6 +87,14 @@ FOS.exec.plsql = function (daContext, config, initFn) {
     var options = config.options;
     var message, messageType, messageTitle;
 
+    // access nested object property by string path
+    // https://stackoverflow.com/questions/6491463/accessing-nested-javascript-objects-and-arrays-by-string-path
+    function parsePath(path){
+        return path.split('.').reduce(function(acc,path){
+            return acc?.[path]
+        }, window)
+    }
+
     function _handleResponse(pData) {
         function _performActions(pData) {
             // this defines the list of actions we support
@@ -345,7 +353,7 @@ FOS.exec.plsql = function (daContext, config, initFn) {
                 clobToSubmit = apex.item(clobSettings.submitClobItem).getValue();
                 break;
             case 'javascriptvariable':
-                var toSubmit = window[clobSettings.submitClobVariable];
+                var toSubmit = parsePath(clobSettings.submitClobVariable);//window[clobSettings.submitClobVariable];
 
                 if (toSubmit instanceof Object) {
                     clobToSubmit = JSON.stringify(toSubmit);
@@ -391,21 +399,28 @@ FOS.exec.plsql = function (daContext, config, initFn) {
         })(spinnerSettings.spinnerElement, spinnerSettings.showSpinnerOverlay);
     }
 
-    // run the pl/sql code in the database
-    var result = apex.server.plugin(ajaxId, {
-        pageItems: pageItems.itemsToSubmit,
-        p_clob_01: clobToSubmit
-    }, {
-        dataType: 'json',
-        loadingIndicator: loadingIndicatorFn,
-        target: daContext.browserEvent.target
-    });
+    // Check to see if our clob is actually a promise (this code works whether it's a value or a promise)
+    // https://stackoverflow.com/questions/27746304/how-do-i-tell-if-an-object-is-a-promise
+    Promise.resolve(clobToSubmit).then(function (value) {
+        // run the pl/sql code in the database
+        var result = apex.server.plugin(ajaxId, {
+            pageItems: pageItems.itemsToSubmit,
+            p_clob_01: value
+        }, {
+            dataType: 'json',
+            loadingIndicator: loadingIndicatorFn,
+            target: daContext.browserEvent.target
+        });
 
-    // handle ajax result using our result promise
-    result.done(function (data) {
-        _handleResponse(data);
-    }).fail(function (jqXHR, textStatus, errorThrown) {
-        apex.da.handleAjaxErrors(jqXHR, textStatus, errorThrown, resumeCallback);
+        // handle ajax result using our result promise
+        result.done(function (data) {
+            _handleResponse(data);
+        }).fail(function (jqXHR, textStatus, errorThrown) {
+            apex.da.handleAjaxErrors(jqXHR, textStatus, errorThrown, resumeCallback);
+        });
+    }).catch(function (err) {
+        apex.debug('##ERROR## FOS.Execute.PLSQL', err);
+        apex.da.handleAjaxErrors({ status: 999 }, 'FOS.Execute.PLSQL', err, resumeCallback);
     });
 };
 

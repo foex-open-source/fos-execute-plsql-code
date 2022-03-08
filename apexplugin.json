@@ -1,6 +1,6 @@
 {
     "name":"FOS - Execute PL\/SQL Code"
-   ,"version":"21.1.0"
+   ,"version":"21.2.0"
    ,"description":"Execute PL\/SQL code on the server with support for CLOB values, notifications, spinners, and more.\r\n\u003Ch4\u003EFree Plug-in under MIT License\u003C\/h4\u003E\r\n\u003Cp\u003E\r\nAll FOS plug-ins are released under MIT License, which essentially means it is free for everyone to use, no matter if commercial or private use. \r\n\u003C\/p\u003E\r\n\u003Ch4\u003EOverview\u003C\/h4\u003E\r\n\u003Cp\u003EThe \u003Cstrong\u003EFOS - Execute PL\/SQL Code\u003C\/strong\u003E dynamic action plug-in introduces some enhancements to the existing \"Execute PL\/SQL Code\" dynamic action that APEX provides. These additional features include:\u003C\/p\u003E\r\n\u003Col\u003E\r\n\u003Cli\u003EProviding a processing icon whilst optionally masking the background either at the region or page level\u003C\/li\u003E\r\n\u003Cli\u003EDeclarative Success \u0026 Error Notifications\u003C\/li\u003E\r\n\u003Cli\u003ESubmitting and returning CLOB data using page items or Javascript variables\u003C\/li\u003E\r\n\u003Cli\u003EReturning the execution results to a Javascript variable\u003C\/li\u003E\r\n\u003Cli\u003EOptionally suppressing the change event on page item values that are returned\u003C\/li\u003E\r\n\u003C\/ol\u003E"
    ,"keywords":[
         "execute"
@@ -34,12 +34,15 @@
            ,"12.2.0.1"
            ,"18.0.0.0"
            ,"19.0.0.0"
+           ,"21.0.0.0"
         ]
        ,"apex":{
             "versions":[
                 "19.2.0"
                ,"20.1.0"
                ,"20.2.0"
+               ,"21.1.0"
+               ,"21.2.0"
             ]
            ,"plugin":{
                 "internalName":"COM.FOS.EXECUTE_PLSQL_CODE"

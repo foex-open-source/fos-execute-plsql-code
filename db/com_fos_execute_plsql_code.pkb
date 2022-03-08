@@ -150,7 +150,7 @@ begin
              , l_lov_null_text
           from apex_application_page_items
          where application_id  = l_app_id
-           and page_id        in (0, l_page_id) -- Bug fix: added support for page zero items - thanks mbrde
+           and page_id        in (wwv_flow.g_global_page_id, l_page_id) -- Bug fix: added support for page zero items - thanks mbrde
            and item_name       = p_item_name
         ;
     exception
@@ -228,7 +228,7 @@ is
 
 begin
     -- standard debugging intro, but only if necessary
-    if apex_application.g_debug
+    if apex_application.g_debug and substr(:DEBUG,6) >= 6
     then
         apex_plugin_util.debug_dynamic_action
           ( p_plugin         => p_plugin
@@ -355,7 +355,7 @@ is
 
 begin
     -- standard debugging intro, but only if necessary
-    if apex_application.g_debug
+    if apex_application.g_debug and substr(:DEBUG,6) >= 6
     then
         apex_plugin_util.debug_dynamic_action
           ( p_plugin         => p_plugin

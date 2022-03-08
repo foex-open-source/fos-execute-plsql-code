@@ -1,6 +1,6 @@
 ## FOS - Execute PL/SQL Code
 
-![](https://img.shields.io/badge/Plug--in_Type-Dynamic_Action-orange.svg) ![](https://img.shields.io/badge/APEX-19.2-success.svg) ![](https://img.shields.io/badge/APEX-20.1-success.svg) ![](https://img.shields.io/badge/APEX-20.2-success.svg)
+![](https://img.shields.io/badge/Plug--in_Type-Dynamic_Action-orange.svg) ![](https://img.shields.io/badge/APEX-19.2-success.svg) ![](https://img.shields.io/badge/APEX-20.1-success.svg) ![](https://img.shields.io/badge/APEX-20.2-success.svg) ![](https://img.shields.io/badge/APEX-21.1-success.svg) ![](https://img.shields.io/badge/APEX-21.2-success.svg)
 
 Execute PL/SQL code on the server with support for CLOB values, notifications, spinners, and more.
 <h4>Free Plug-in under MIT License</h4>
